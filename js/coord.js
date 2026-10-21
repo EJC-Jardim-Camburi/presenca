@@ -103,7 +103,7 @@ function renderAuth() {
       <form id="auth" class="stack" novalidate>
         <h2>${signup ? "Criar conta" : "Entrar"}</h2>
         ${signup ? `<p class="small muted">Use o e-mail que a coordenação cadastrou para você. Outros e-mails criam a conta, mas não têm acesso.</p>` : ""}
-        <label class="field"><span>E-mail</span><input id="email" class="input" type="email" autocomplete="email" required></label>
+        <label class="field"><span>E-mail</span><input id="email" class="input" type="email" autocomplete="email" required value="${esc(S.authEmail || "")}"></label>
         <label class="field"><span>Senha</span><input id="pass" class="input" type="password" autocomplete="${signup ? "new-password" : "current-password"}" minlength="6" required></label>
         ${S.authErr ? `<p class="err">${esc(S.authErr)}</p>` : ""}
         ${S.authMsg ? `<p class="consent" style="display:block">${esc(S.authMsg)}</p>` : ""}
@@ -116,6 +116,7 @@ function renderAuth() {
   $root.querySelector("#auth").onsubmit = async (e) => {
     e.preventDefault();
     const email = $root.querySelector("#email").value.trim().toLowerCase();
+    S.authEmail = email;
     const password = $root.querySelector("#pass").value;
     S.authErr = S.authMsg = "";
     if (!email || password.length < 6) { S.authErr = "Preencha o e-mail e uma senha com pelo menos 6 caracteres."; return renderAuth(); }
@@ -135,6 +136,9 @@ function traduz(m = "") {
   if (/Invalid login/i.test(m)) return "E-mail ou senha incorretos.";
   if (/not confirmed/i.test(m)) return "Falta confirmar o e-mail. Procure a mensagem de confirmação na sua caixa de entrada ou no spam.";
   if (/already registered/i.test(m)) return "Esse e-mail já tem conta. Use Entrar.";
+  if (/weak|easy to guess|pwned|leaked/i.test(m)) return "Essa senha é fraca ou já apareceu em vazamentos de dados. Escolha outra mais forte, por exemplo 3 ou 4 palavras soltas com um número.";
+  if (/at least|should be|characters/i.test(m)) return "A senha precisa ter pelo menos 6 caracteres.";
+  if (/invalid.*email|email.*invalid/i.test(m)) return "Confira o e-mail digitado.";
   if (/rate limit/i.test(m)) return "Muitas tentativas seguidas. Espere alguns minutos e tente de novo.";
   return m;
 }

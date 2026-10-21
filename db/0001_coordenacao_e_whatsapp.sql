@@ -2,7 +2,7 @@
 
 -- 1) Coordenação: só e-mails pré-cadastrados em public.coordinators viram coordenadores.
 --    (Antes: o primeiro usuário a se cadastrar virava admin — brecha num site público.)
-INSERT INTO public.coordinators (email, role) VALUES ('joao@tastefy.com.br', 'admin')
+INSERT INTO public.coordinators (email, role) VALUES ('joaovitorramos@gmail.com', 'admin')
   ON CONFLICT (email) DO UPDATE SET role = 'admin';
 
 CREATE OR REPLACE FUNCTION public.handle_new_user() RETURNS trigger
@@ -23,3 +23,6 @@ LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
   FROM public.meetings m, public.app_settings s
   WHERE upper(m.code) = upper(trim(_code)) AND m.is_open
 $$;
+
+-- 21/10 (noite): admin passa a ser o e-mail pessoal do João (o grupo não é da empresa).
+DELETE FROM public.coordinators WHERE email = 'joao@tastefy.com.br';

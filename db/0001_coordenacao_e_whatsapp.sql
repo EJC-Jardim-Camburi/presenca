@@ -2,7 +2,7 @@
 
 -- 1) Coordenação: só e-mails pré-cadastrados em public.coordinators viram coordenadores.
 --    (Antes: o primeiro usuário a se cadastrar virava admin — brecha num site público.)
-INSERT INTO public.coordinators (email, role) VALUES ('joaovitorramos@gmail.com', 'admin')
+INSERT INTO public.coordinators (email, role) VALUES ('joaovitoramosss@gmail.com', 'admin')
   ON CONFLICT (email) DO UPDATE SET role = 'admin';
 
 CREATE OR REPLACE FUNCTION public.handle_new_user() RETURNS trigger

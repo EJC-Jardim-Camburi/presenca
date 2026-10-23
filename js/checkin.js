@@ -18,10 +18,10 @@ const store = {
 
 function header() {
   if (!meeting) return;
-  document.getElementById("group").textContent = meeting.group_name || "Grupo Jovem Sagrada Família";
+  document.getElementById("group").textContent = meeting.group_name || "EJC Jardim Camburi";
   document.getElementById("title").textContent = meeting.type;
   document.getElementById("subtitle").textContent = fmtDate(meeting.date) + (meeting.theme ? ` · ${meeting.theme}` : "");
-  document.title = `Presença · ${meeting.group_name || "Grupo Jovem"}`;
+  document.title = `Presença · ${meeting.group_name || "EJC Jardim Camburi"}`;
 }
 
 function render(html, focus) {
@@ -31,7 +31,7 @@ function render(html, focus) {
 
 // ---------- telas ----------
 function landing() {
-  document.getElementById("title").textContent = "Grupo Jovem Sagrada Família";
+  document.getElementById("title").textContent = "EJC Jardim Camburi";
   render(`
     <div class="stack center">
       <h2>Chegou no encontro?</h2>

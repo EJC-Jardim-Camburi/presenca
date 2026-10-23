@@ -1,6 +1,6 @@
-# Chamada · Grupo Jovem Sagrada Família
+# Chamada · EJC Jardim Camburi
 
-Sistema de presença por QR Code do grupo de jovens da Matriz Sagrada Família (Jardim Camburi, Vitória/ES).
+Sistema de presença por QR Code do EJC Jardim Camburi, grupo de jovens da Matriz Sagrada Família (Jardim Camburi, Vitória/ES).
 
 - **`index.html`**: página pública. Sem `?e=` mostra a entrada; com `?e=CODIGO` é o check-in do encontro: o jovem digita o WhatsApp, confirma (ou se cadastra na primeira vez) e vê o botão do grupo do WhatsApp.
 - **`coordenacao.html`**: área da coordenação (login por e-mail e senha). Painel, encontros (abrir/fechar chamada, QR em tela cheia ao vivo, presença manual), pessoas (status Novo/Frequente/Ocasional/Sumido, WhatsApp, mesclar duplicados) e ajustes (local, raio, link do grupo, equipe).

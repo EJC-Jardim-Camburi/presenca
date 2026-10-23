@@ -97,7 +97,7 @@ const ICON = {
 function renderAuth() {
   const signup = S.authMode === "signup";
   $root.innerHTML = `
-    <header class="hero"><p class="eyebrow">Grupo Jovem Sagrada Família</p><h1>Área da coordenação</h1>
+    <header class="hero"><p class="eyebrow">EJC Jardim Camburi</p><h1>Área da coordenação</h1>
       <p class="sub">Chamada, encontros e acompanhamento dos jovens</p></header>
     <main class="wrap"><div class="card">
       <form id="auth" class="stack" novalidate>
@@ -145,7 +145,7 @@ function traduz(m = "") {
 
 function renderNoAccess() {
   $root.innerHTML = `
-    <header class="hero"><p class="eyebrow">Grupo Jovem Sagrada Família</p><h1>Sem acesso</h1></header>
+    <header class="hero"><p class="eyebrow">EJC Jardim Camburi</p><h1>Sem acesso</h1></header>
     <main class="wrap"><div class="card stack center">
       <p>Você entrou como <b>${esc(S.session.user.email)}</b>, mas esse e-mail ainda não faz parte da coordenação.</p>
       <p class="muted">Peça para a coordenação cadastrar seu e-mail em Ajustes → Equipe e depois entre de novo.</p>
@@ -162,7 +162,7 @@ function render() {
   $root.innerHTML = `
     <div class="app">
       <header class="topbar"><div class="inner">
-        <div><p class="eyebrow">${esc(S.settings?.group_name || "Grupo Jovem")}</p><h1>${tabs.find((t) => t[0] === S.tab)[1]}</h1></div>
+        <div><p class="eyebrow">${esc(S.settings?.group_name || "EJC Jardim Camburi")}</p><h1>${tabs.find((t) => t[0] === S.tab)[1]}</h1></div>
         ${openMeeting() ? `<button class="btn gold sm" data-act="qr" data-id="${openMeeting().id}">Mostrar QR</button>` : ""}
       </div></header>
       <main class="page" id="page">${({ painel: viewPainel, encontros: viewEncontros, pessoas: viewPessoas, ajustes: viewAjustes })[S.tab]()}</main>
@@ -527,7 +527,7 @@ function renderQR() {
   const att = [...derived.byMeeting.get(m.id)].sort((a, b) => b.created_at.localeCompare(a.created_at));
   const names = att.slice(0, 14).map((a) => firstName(derived.personById.get(a.person_id)?.full_name)).filter(Boolean);
   return `<div class="qr-screen" role="dialog" aria-modal="true" aria-label="QR da chamada">
-    <div><p class="eyebrow">${esc(S.settings?.group_name || "Grupo Jovem")}</p><h1 style="font-size:1.7rem;margin-top:4px">Chegou? Confirma aqui!</h1>
+    <div><p class="eyebrow">${esc(S.settings?.group_name || "EJC Jardim Camburi")}</p><h1 style="font-size:1.7rem;margin-top:4px">Chegou? Confirma aqui!</h1>
       <p class="sub">${fmtDate(m.date, true)} · ${esc(meetingTitle(m))}</p></div>
     ${m.is_open ? `<div class="qr-box"><canvas id="qr-canvas"></canvas></div>` : `<div class="card" style="color:var(--ink)"><p><b>A chamada está fechada.</b> Abra para o QR funcionar.</p><button class="btn primary block" style="margin-top:12px" data-act="toggle" data-id="${m.id}">Abrir chamada</button></div>`}
     <div><div class="qr-count">${att.length}</div><p class="sub">presentes</p></div>
@@ -572,7 +572,7 @@ function posterPNG(m) {
   g.fillStyle = "#172350"; g.fillRect(0, 0, W, 330);
   g.textAlign = "center";
   g.fillStyle = "#e3b45c"; g.font = "700 38px Figtree, sans-serif";
-  g.fillText((S.settings?.group_name || "Grupo Jovem").toUpperCase(), W / 2, 100);
+  g.fillText((S.settings?.group_name || "EJC Jardim Camburi").toUpperCase(), W / 2, 100);
   g.fillStyle = "#fff"; g.font = "800 84px 'Bricolage Grotesque', sans-serif";
   g.fillText("Chegou? Confirma aqui!", W / 2, 210);
   g.fillStyle = "#d9deea"; g.font = "600 38px Figtree, sans-serif";
@@ -732,7 +732,7 @@ async function submit(form) {
       if (wa && !/^https:\/\//.test(wa)) return toast("O link do grupo precisa começar com https://");
       const lat = Number(v("#s-lat").replace(",", ".")), lng = Number(v("#s-lng").replace(",", ".")), radius = Number(v("#s-radius"));
       if (!isFinite(lat) || !isFinite(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180) return toast("Latitude/longitude inválidas.");
-      const row = { group_name: v("#s-name") || "Grupo Jovem Sagrada Família", whatsapp_group_url: wa || null, location_name: v("#s-loc"), lat, lng, radius_m: Math.round(radius) || 200, updated_at: new Date().toISOString() };
+      const row = { group_name: v("#s-name") || "EJC Jardim Camburi", whatsapp_group_url: wa || null, location_name: v("#s-loc"), lat, lng, radius_m: Math.round(radius) || 200, updated_at: new Date().toISOString() };
       const { error } = await sb.from("app_settings").update(row).eq("id", 1);
       if (error) throw error;
       toast("Ajustes salvos");

@@ -94,34 +94,60 @@ const ICON = {
 };
 
 // ---------------------------------------------------------------- telas de acesso
-function renderAuth() {
-  const signup = S.authMode === "signup";
-  $root.innerHTML = `
+// Modos: login · signup · forgot (pedir link por e-mail) · recovery (veio do link, define senha nova)
+const authShell = (title, body) => `
     <header class="hero"><p class="eyebrow">EJC Jardim Camburi</p><h1>Área da coordenação</h1>
       <p class="sub">Chamada, encontros e acompanhamento dos jovens</p></header>
     <main class="wrap"><div class="card">
       <form id="auth" class="stack" novalidate>
-        <h2>${signup ? "Criar conta" : "Entrar"}</h2>
-        ${signup ? `<p class="small muted">Use o e-mail que a coordenação cadastrou para você. Outros e-mails criam a conta, mas não têm acesso.</p>` : ""}
-        <label class="field"><span>E-mail</span><input id="email" class="input" type="email" autocomplete="email" required value="${esc(S.authEmail || "")}"></label>
-        <label class="field"><span>Senha</span><input id="pass" class="input" type="password" autocomplete="${signup ? "new-password" : "current-password"}" minlength="6" required></label>
+        <h2>${title}</h2>
+        ${body}
         ${S.authErr ? `<p class="err">${esc(S.authErr)}</p>` : ""}
         ${S.authMsg ? `<p class="consent" style="display:block">${esc(S.authMsg)}</p>` : ""}
-        <button class="btn primary xl" type="submit">${signup ? "Criar conta" : "Entrar"}</button>
-        <button class="linkbtn" type="button" id="swap">${signup ? "Já tenho conta → Entrar" : "Primeiro acesso? Criar conta"}</button>
-        <a class="linkbtn center" href="index.html">← Voltar ao início</a>
       </form>
     </div></main>`;
-  $root.querySelector("#swap").onclick = () => { S.authMode = signup ? "login" : "signup"; S.authErr = S.authMsg = ""; renderAuth(); };
+
+function setMode(mode) { S.authMode = mode; S.authErr = S.authMsg = ""; renderAuth(); }
+
+function renderAuth() {
+  if (S.authMode === "recovery") return renderRecovery();
+  const signup = S.authMode === "signup", forgot = S.authMode === "forgot";
+  const emailField = `<label class="field"><span>E-mail</span><input id="email" class="input" type="email" autocomplete="email" required value="${esc(S.authEmail || "")}"></label>`;
+  const passField = `<label class="field"><span>Senha</span><input id="pass" class="input" type="password" autocomplete="${signup ? "new-password" : "current-password"}" minlength="6" required></label>`;
+  const body = forgot
+    ? `<p class="small muted">Digite o e-mail da sua conta. Vamos mandar um link para você criar uma senha nova.</p>
+       ${emailField}
+       <button class="btn primary xl" type="submit">Enviar link para o e-mail</button>
+       <button class="linkbtn" type="button" data-mode="login">← Voltar para Entrar</button>`
+    : `${signup ? `<p class="small muted">Use o e-mail que a coordenação cadastrou para você. Outros e-mails criam a conta, mas não têm acesso.</p>` : ""}
+       ${emailField}${passField}
+       ${signup ? "" : `<button class="linkbtn" type="button" data-mode="forgot" style="justify-self:end;padding:0 4px">Esqueci minha senha</button>`}
+       <button class="btn primary xl" type="submit">${signup ? "Criar conta" : "Entrar"}</button>
+       <button class="linkbtn" type="button" data-mode="${signup ? "login" : "signup"}">${signup ? "Já tenho conta → Entrar" : "Primeiro acesso? Criar conta"}</button>
+       <a class="linkbtn center" href="index.html">← Voltar ao início</a>`;
+  $root.innerHTML = authShell(signup ? "Criar conta" : forgot ? "Esqueci minha senha" : "Entrar", body);
+  $root.querySelectorAll("[data-mode]").forEach((b) => (b.onclick = () => {
+    S.authEmail = $root.querySelector("#email")?.value.trim().toLowerCase() || S.authEmail;
+    setMode(b.dataset.mode);
+  }));
   $root.querySelector("#auth").onsubmit = async (e) => {
     e.preventDefault();
     const email = $root.querySelector("#email").value.trim().toLowerCase();
     S.authEmail = email;
-    const password = $root.querySelector("#pass").value;
     S.authErr = S.authMsg = "";
+    const btn = $root.querySelector("[type=submit]");
+    btn.disabled = true;
+    if (forgot) {
+      if (!/^\S+@\S+\.\S+$/.test(email)) { S.authErr = "Digite o e-mail da sua conta."; return renderAuth(); }
+      const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: location.origin + location.pathname });
+      if (error) S.authErr = traduz(error.message);
+      else S.authMsg = `Pronto! Se ${email} tiver conta, chega em instantes um e-mail com o link para criar uma senha nova. Veja também o spam. O link vale por 1 hora.`;
+      return renderAuth();
+    }
+    const password = $root.querySelector("#pass").value;
     if (!email || password.length < 6) { S.authErr = "Preencha o e-mail e uma senha com pelo menos 6 caracteres."; return renderAuth(); }
     if (signup) {
-      const { data, error } = await sb.auth.signUp({ email, password, options: { emailRedirectTo: location.href.split("#")[0] } });
+      const { data, error } = await sb.auth.signUp({ email, password, options: { emailRedirectTo: location.origin + location.pathname } });
       if (error) S.authErr = traduz(error.message);
       else if (!data.session) { S.authMode = "login"; S.authMsg = "Conta criada! Abra o e-mail de confirmação que chegou na sua caixa (veja o spam) e depois entre aqui."; }
     } else {
@@ -132,6 +158,34 @@ function renderAuth() {
   };
 }
 
+function renderRecovery() {
+  if (!S.session) {
+    S.authMode = "forgot";
+    S.authErr = "Esse link expirou ou já foi usado. Peça um novo abaixo.";
+    return renderAuth();
+  }
+  $root.innerHTML = authShell("Criar senha nova", `
+    <p class="small muted">Conta: <b>${esc(S.session.user.email)}</b></p>
+    <label class="field"><span>Nova senha</span><input id="pass" class="input" type="password" autocomplete="new-password" minlength="6" required></label>
+    <label class="field"><span>Repita a nova senha</span><input id="pass2" class="input" type="password" autocomplete="new-password" minlength="6" required></label>
+    <p class="tiny muted">Dica: 3 ou 4 palavras soltas com um número. Senhas muito comuns são recusadas.</p>
+    <button class="btn primary xl" type="submit">Salvar senha nova</button>`);
+  $root.querySelector("#auth").onsubmit = async (e) => {
+    e.preventDefault();
+    const p1 = $root.querySelector("#pass").value, p2 = $root.querySelector("#pass2").value;
+    S.authErr = S.authMsg = "";
+    if (p1.length < 6) { S.authErr = "A senha precisa ter pelo menos 6 caracteres."; return renderRecovery(); }
+    if (p1 !== p2) { S.authErr = "As duas senhas não estão iguais."; return renderRecovery(); }
+    $root.querySelector("[type=submit]").disabled = true;
+    const { error } = await sb.auth.updateUser({ password: p1 });
+    if (error) { S.authErr = traduz(error.message); return renderRecovery(); }
+    S.authMode = "login";
+    history.replaceState(null, "", location.pathname);
+    toast("Senha nova salva");
+    onSession(S.session);
+  };
+}
+
 function traduz(m = "") {
   if (/Invalid login/i.test(m)) return "E-mail ou senha incorretos.";
   if (/not confirmed/i.test(m)) return "Falta confirmar o e-mail. Procure a mensagem de confirmação na sua caixa de entrada ou no spam.";
@@ -139,6 +193,8 @@ function traduz(m = "") {
   if (/weak|easy to guess|pwned|leaked/i.test(m)) return "Essa senha é fraca ou já apareceu em vazamentos de dados. Escolha outra mais forte, por exemplo 3 ou 4 palavras soltas com um número.";
   if (/at least|should be|characters/i.test(m)) return "A senha precisa ter pelo menos 6 caracteres.";
   if (/invalid.*email|email.*invalid/i.test(m)) return "Confira o e-mail digitado.";
+  if (/same.*password|different from the old/i.test(m)) return "A senha nova precisa ser diferente da antiga.";
+  if (/rate limit|security purposes|seconds/i.test(m)) return "Muitas tentativas seguidas. Espere alguns minutos e tente de novo.";
   if (/rate limit/i.test(m)) return "Muitas tentativas seguidas. Espere alguns minutos e tente de novo.";
   return m;
 }
@@ -783,8 +839,24 @@ async function onSession(session) {
   subscribeRealtime();
 }
 
+// Link de "esqueci a senha": o hash da URL chega com type=recovery (ou com erro, se expirou).
+const urlHash = window.__authHash || "";
+let recoveryLink = /type=recovery/.test(urlHash);
+if (/error_code=|error=/.test(urlHash) && !recoveryLink) {
+  S.authMode = "forgot";
+  S.authErr = "Esse link expirou ou já foi usado. Peça um novo abaixo.";
+  history.replaceState(null, "", location.pathname);
+}
+
 let lastUid;
-sb.auth.onAuthStateChange((_ev, session) => {
+sb.auth.onAuthStateChange((ev, session) => {
+  if (ev === "PASSWORD_RECOVERY" || (recoveryLink && session)) {
+    recoveryLink = false;
+    S.session = session; lastUid = session?.user?.id ?? null;
+    S.authMode = "recovery";
+    return setTimeout(renderRecovery, 0);
+  }
+  if (S.authMode === "recovery") { S.session = session; if (!session) setTimeout(renderRecovery, 0); return; }
   const uid = session?.user?.id ?? null;
   if (uid === lastUid) { S.session = session; return; }
   lastUid = uid;

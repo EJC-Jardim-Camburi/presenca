@@ -138,7 +138,7 @@ function renderAuth() {
     const btn = $root.querySelector("[type=submit]");
     btn.disabled = true;
     if (forgot) {
-      if (!/^\S+@\S+.\S+$/.test(email)) { S.authErr = "Digite o e-mail da sua conta."; return renderAuth(); }
+      if (!/^\S+@\S+\.\S+$/.test(email)) { S.authErr = "Digite o e-mail da sua conta."; return renderAuth(); }
       const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: location.origin + location.pathname });
       if (error) S.authErr = traduz(error.message);
       else S.authMsg = `Pronto! Se ${email} tiver conta, chega em instantes um e-mail com o link para criar uma senha nova. Veja também o spam. O link vale por 1 hora.`;
@@ -795,7 +795,7 @@ async function submit(form) {
     }
     if (form.id === "coord-add") {
       const email = v("#c-email").toLowerCase();
-      if (!/^\S+@\S+.\S+$/.test(email)) return toast("E-mail inválido.");
+      if (!/^\S+@\S+\.\S+$/.test(email)) return toast("E-mail inválido.");
       const { error } = await sb.from("coordinators").insert({ email, role: $root.querySelector("#c-role").value });
       if (error) throw (/duplicate|unique/i.test(error.message) ? new Error("esse e-mail já está na equipe.") : error);
       toast("Adicionado à equipe");

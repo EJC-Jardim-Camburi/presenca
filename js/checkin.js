@@ -1,8 +1,8 @@
 // Página pública: o jovem lê o QR (index.html?e=CODIGO), digita o WhatsApp e confirma.
 // Só conversa com o banco por 3 funções públicas (public_meeting, public_lookup, public_checkin),
 // que nunca devolvem mais que o primeiro nome.
-import { sb } from "./config.js?v=20261023c";
-import { esc, maskPhone, isValidPhone, onlyDigits, fmtDate, HOW_FOUND, getPosition } from "./lib.js?v=20261023c";
+import { sb } from "./config.js?v=20261023d";
+import { esc, maskPhone, isValidPhone, onlyDigits, fmtDate, HOW_FOUND, getPosition } from "./lib.js?v=20261023d";
 
 const PHONE_KEY = "gjsf_phone";
 const code = new URLSearchParams(location.search).get("e")?.trim() || "";

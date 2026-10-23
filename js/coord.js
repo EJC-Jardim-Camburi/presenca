@@ -1,11 +1,11 @@
 // Área da coordenação: login, painel, encontros (com QR ao vivo), pessoas e ajustes.
 // Todo acesso a dados passa pelas regras do banco: só quem está na tabela coordinators lê/escreve.
-import { sb } from "./config.js?v=20261023c";
+import { sb } from "./config.js?v=20261023d";
 import {
   esc, fmtDate, fmtShort, fmtPhone, maskPhone, onlyDigits, isValidPhone, waLink, firstName,
   todayISO, randomCode, getPosition, computeStats, firstTimeChecker, toCSV, download,
   MEETING_TYPES, HOW_FOUND, GROUP_TYPE,
-} from "./lib.js?v=20261023c";
+} from "./lib.js?v=20261023d";
 
 const $root = document.getElementById("root");
 const S = {
@@ -434,6 +434,15 @@ function viewAjustes() {
     <section class="panel">
       <h2>Sua conta</h2>
       <p class="small">${esc(S.session.user.email)} · ${esc(S.me.role)}</p>
+      <details id="pass-box"><summary class="small" style="cursor:pointer;font-weight:700">Trocar minha senha</summary>
+        <form id="pass-change" class="stack" style="margin-top:12px" novalidate>
+          <label class="field"><span>Senha atual</span><input id="pc-old" class="input" type="password" autocomplete="current-password"></label>
+          <label class="field"><span>Nova senha</span><input id="pc-new" class="input" type="password" autocomplete="new-password" minlength="6"></label>
+          <label class="field"><span>Repita a nova senha</span><input id="pc-new2" class="input" type="password" autocomplete="new-password" minlength="6"></label>
+          <p class="tiny muted">Dica: 3 ou 4 palavras soltas com um número. Senhas muito comuns são recusadas.</p>
+          <button class="btn primary" type="submit">Salvar senha nova</button>
+        </form>
+      </details>
       <div class="row"><button class="btn" data-act="logout">Sair</button><a class="btn ghost" href="index.html">Ver página pública</a></div>
     </section>`;
 }
@@ -792,6 +801,19 @@ async function submit(form) {
       const { error } = await sb.from("app_settings").update(row).eq("id", 1);
       if (error) throw error;
       toast("Ajustes salvos");
+    }
+    if (form.id === "pass-change") {
+      const old = $root.querySelector("#pc-old").value, p1 = $root.querySelector("#pc-new").value, p2 = $root.querySelector("#pc-new2").value;
+      if (!old) return toast("Digite a senha atual.");
+      if (p1.length < 6) return toast("A nova senha precisa ter pelo menos 6 caracteres.");
+      if (p1 !== p2) return toast("As duas senhas novas não estão iguais.");
+      const check = await sb.auth.signInWithPassword({ email: S.session.user.email, password: old });
+      if (check.error) return toast("A senha atual está errada.");
+      const { error } = await sb.auth.updateUser({ password: p1 });
+      if (error) return toast(traduz(error.message));
+      form.reset();
+      $root.querySelector("#pass-box")?.removeAttribute("open");
+      return toast("Senha trocada");
     }
     if (form.id === "coord-add") {
       const email = v("#c-email").toLowerCase();

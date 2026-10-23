@@ -1,11 +1,11 @@
 // Área da coordenação: login, painel, encontros (com QR ao vivo), pessoas e ajustes.
 // Todo acesso a dados passa pelas regras do banco: só quem está na tabela coordinators lê/escreve.
-import { sb } from "./config.js?v=20261023b";
+import { sb } from "./config.js?v=20261023c";
 import {
   esc, fmtDate, fmtShort, fmtPhone, maskPhone, onlyDigits, isValidPhone, waLink, firstName,
   todayISO, randomCode, getPosition, computeStats, firstTimeChecker, toCSV, download,
   MEETING_TYPES, HOW_FOUND, GROUP_TYPE,
-} from "./lib.js?v=20261023b";
+} from "./lib.js?v=20261023c";
 
 const $root = document.getElementById("root");
 const S = {

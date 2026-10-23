@@ -28,3 +28,5 @@ Abrir http://localhost:5173 (check-in: `http://localhost:5173/index.html?e=CODIG
 ## Publicar
 
 GitHub Pages, branch `main`, pasta raiz. Todo `git push` publica em 1–2 minutos.
+
+Ao publicar mudança em CSS/JS, troque o `?v=` nos `<script>`/`<link>` e nos `import` (index.html, coordenacao.html, js/coord.js, js/checkin.js): o GitHub Pages deixa os arquivos em cache por 10 minutos.

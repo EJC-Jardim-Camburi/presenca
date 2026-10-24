@@ -175,3 +175,7 @@ textarea.input { height: auto; min-height: 84px; padding: 12px 14px; resize: ver
 .confirm-inline { background: var(--bad-soft); border-radius: 12px; padding: 10px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: .9rem; }
 .sheet .stats { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .sheet .stats .stat b { font-size: 1.5rem; }
+.pill.team { background: var(--navy); color: #fff; vertical-align: 2px; }
+.pill.team[data-team="Música"] { background: #6b3fa0; }
+.pill.team[data-team="Intercessão"] { background: #2f7a86; }
+.pill.team[data-team="Acolhida"] { background: #c9953c; color: var(--navy-deep); }

@@ -1,11 +1,11 @@
 // Área da coordenação: login, painel, encontros (com QR ao vivo), pessoas e ajustes.
 // Todo acesso a dados passa pelas regras do banco: só quem está na tabela coordinators lê/escreve.
-import { sb } from "./config.js?v=20261024a";
+import { sb } from "./config.js?v=20261024b";
 import {
   esc, fmtDate, fmtShort, fmtPhone, maskPhone, onlyDigits, isValidPhone, waLink, firstName,
   todayISO, randomCode, getPosition, computeStats, firstTimeChecker, toCSV, download,
   MEETING_TYPES, HOW_FOUND, GROUP_TYPE,
-} from "./lib.js?v=20261024a";
+} from "./lib.js?v=20261024b";
 
 const $root = document.getElementById("root");
 const S = {
@@ -81,6 +81,9 @@ function toast(msg) {
   setTimeout(() => t.remove(), 2600);
 }
 const fail = (e) => { console.error(e); toast(`Não deu certo: ${e?.message || e}`); };
+const TEAMS = ["Coordenação", "Música", "Intercessão", "Acolhida"];
+const teamPill = (p) => (p?.team ? `<span class="pill team" data-team="${esc(p.team)}">${esc(p.team)}</span> ` : "");
+const nameWithTeam = (p) => `${teamPill(p)}${esc(p?.full_name || "—")}`;
 const statusPill = (s) => `<span class="pill ${s.toLowerCase()}">${s}</span>`;
 const pillsFor = (p) => {
   const st = derived.stats.get(p.id);
@@ -271,7 +274,7 @@ function viewPainel() {
   if (!S.meetings.length) return `<section class="panel empty"><p>Nenhum encontro ainda.</p><button class="btn primary" data-act="new-meeting">Criar encontro de hoje</button></section>`;
 
   const toCall = [
-    ...latestNew.map((a) => ({ p: personById.get(a.person_id), why: "Novo", msg: (n) => `Oi, ${n}! Que alegria ter você no grupo de jovens. Esperamos você no próximo encontro! 💙` })),
+    ...latestNew.filter((a) => !personById.get(a.person_id)?.team).map((a) => ({ p: personById.get(a.person_id), why: "Novo", msg: (n) => `Oi, ${n}! Que alegria ter você no grupo de jovens. Esperamos você no próximo encontro! 💙` })),
     ...S.people.filter((p) => stats.get(p.id)?.status === "Sumido").map((p) => ({ p, why: "Sumido", msg: (n) => `Oi, ${n}! Sentimos sua falta no grupo de jovens. Tá tudo bem? Vai ser muito bom te ver no próximo encontro 💙` })),
   ].filter((x) => x.p);
 
@@ -301,7 +304,7 @@ function viewPainel() {
       <div class="panel-head"><h2>Para a acolhida chamar essa semana</h2><span class="small muted">${toCall.length} pessoa${toCall.length === 1 ? "" : "s"}</span></div>
       ${toCall.length ? `<div class="list">${toCall.map(({ p, why, msg }) => {
         const link = waLink(p.phone, msg(firstName(p.full_name)));
-        return `<div class="item"><div class="main"><div class="name">${esc(p.full_name)}</div>
+        return `<div class="item"><div class="main"><div class="name">${nameWithTeam(p)}</div>
           <div class="meta">${statusPill(why)}<span>${why === "Novo" ? "dar boas-vindas" : "sentimos sua falta"}</span><span>${esc(fmtPhone(p.phone))}</span></div></div>
           ${link ? `<a class="btn wa sm" href="${link}" target="_blank" rel="noopener">WhatsApp</a>` : `<span class="tiny muted">sem telefone</span>`}</div>`;
       }).join("")}</div>` : `<p class="muted small">Ninguém novo nem sumido por enquanto. Os nomes aparecem aqui depois de cada encontro.</p>`}
@@ -371,14 +374,15 @@ function viewEncontros() {
 }
 
 // ---------------------------------------------------------------- Pessoas
-const FILTERS = ["Todos", "Novo", "Frequente", "Ocasional", "Sumido", "A confirmar"];
+const FILTERS = ["Todos", "Novo", "Frequente", "Ocasional", "Sumido", "A confirmar", "Equipes"];
 function filteredPeople() {
   const q = S.search.trim().toLowerCase().normalize("NFD").replace(/\p{M}/gu, "");
   const qd = onlyDigits(S.search);
   return S.people.filter((p) => {
     const st = derived.stats.get(p.id);
     if (S.filter === "A confirmar" && !p.needs_review) return false;
-    if (!["Todos", "A confirmar"].includes(S.filter) && st?.status !== S.filter) return false;
+    if (S.filter === "Equipes" && !p.team) return false;
+    if (!["Todos", "A confirmar", "Equipes"].includes(S.filter) && st?.status !== S.filter) return false;
     if (!q) return true;
     const name = p.full_name.toLowerCase().normalize("NFD").replace(/\p{M}/gu, "");
     return name.includes(q) || (qd.length >= 3 && (p.phone || "").includes(qd));
@@ -390,7 +394,7 @@ function peopleList() {
   return `<p class="small muted">${list.length} pessoa${list.length === 1 ? "" : "s"}</p>` + list.map((p) => {
     const st = derived.stats.get(p.id);
     return `<div class="item click" data-act="person" data-id="${p.id}" role="button" tabindex="0">
-      <div class="main"><div class="name">${esc(p.full_name)}</div>
+      <div class="main"><div class="name">${nameWithTeam(p)}</div>
       <div class="meta">${pillsFor(p)}<span class="num">${esc(fmtPhone(p.phone))}</span></div></div>
       <div class="center" style="min-width:64px"><b class="num" style="font-size:1.2rem">${st?.total ?? 0}</b><div class="tiny muted">presença${st?.total === 1 ? "" : "s"}</div></div></div>`;
   }).join("");
@@ -513,7 +517,7 @@ function sheetMeeting() {
     <section class="panel"><h3>Presentes</h3>
       ${att.length ? `<div class="list">${att.map((a) => {
         const p = derived.personById.get(a.person_id);
-        return `<div class="item"><div class="main"><div class="name">${esc(p?.full_name || "—")}</div><div class="meta">${badge(a)}</div></div>
+        return `<div class="item"><div class="main"><div class="name">${nameWithTeam(p)}</div><div class="meta">${badge(a)}</div></div>
           ${S.sheet.confirmAtt === a.id
             ? `<span class="confirm-inline">Remover? <button class="btn sm danger" data-act="del-att" data-id="${a.id}">Sim</button><button class="btn sm" data-act="cancel-att">Não</button></span>`
             : `<button class="btn sm ghost" data-act="ask-del-att" data-id="${a.id}" aria-label="Remover presença">Remover</button>`}</div>`;
@@ -532,7 +536,7 @@ function addResults() {
     return n.includes(q) || (qd.length >= 3 && (p.phone || "").includes(qd));
   }).slice(0, 8);
   if (!res.length) return `<p class="tiny muted">Ninguém com esse nome. Use “Pessoa nova” abaixo.</p>`;
-  return res.map((p) => `<div class="item"><div class="main"><div class="name">${esc(p.full_name)}</div><div class="meta">${esc(fmtPhone(p.phone))}</div></div>
+  return res.map((p) => `<div class="item"><div class="main"><div class="name">${nameWithTeam(p)}</div><div class="meta">${esc(fmtPhone(p.phone))}</div></div>
     ${present.has(p.id) ? `<span class="pill frequente">presente</span>` : `<button class="btn sm primary" data-act="add-att" data-id="${p.id}">Marcar presença</button>`}</div>`).join("");
 }
 
@@ -544,7 +548,7 @@ function sheetPerson() {
     .map((a) => ({ a, m: S.meetings.find((m) => m.id === a.meeting_id) })).filter((x) => x.m)
     .sort((x, y) => (x.m.date < y.m.date ? 1 : -1));
   const link = waLink(p.phone);
-  return `${sheetHead(esc(p.full_name), pillsFor(p))}
+  return `${sheetHead(nameWithTeam(p), pillsFor(p))}
     <div class="row">
       ${link ? `<a class="btn wa" href="${link}" target="_blank" rel="noopener">Chamar no WhatsApp</a>` : ""}
       <button class="btn" data-act="edit-person" data-id="${p.id}">Editar dados</button>
@@ -594,6 +598,7 @@ function sheetPersonForm() {
       <label class="field"><span>Como conheceu o grupo</span><select id="p-how" class="input"><option value="">—</option>${HOW_FOUND.map((h) => `<option ${p.how_found === h ? "selected" : ""}>${h}</option>`).join("")}</select></label>
       <label class="field"><span>Quem convidou</span><input id="p-inv" class="input" value="${esc(p.invited_by || "")}"></label>
       <label class="field"><span>Observações</span><textarea id="p-notes" class="input">${esc(p.notes || "")}</textarea></label>
+      <label class="field"><span>Equipe em que serve</span><select id="p-team" class="input"><option value="">Nenhuma (participante)</option>${TEAMS.map((t) => `<option ${p.team === t ? "selected" : ""}>${t}</option>`).join("")}</select></label>
       <label class="consent"><input type="checkbox" id="p-review" ${p.needs_review ? "checked" : ""}><span>Dados a confirmar</span></label>
       <button class="btn primary xl" type="submit">Salvar</button>
     </form>`;
@@ -746,10 +751,10 @@ async function act(name, id, el) {
         S.confirmCoord = null; await loadAll(); toast("Removido da equipe"); break;
       }
       case "csv-people": {
-        const rows = [["Nome", "WhatsApp", "Status", "Presenças", "1ª presença", "Última presença", "Como conheceu", "Quem convidou", "Nascimento", "Autorizou WhatsApp", "Dados a confirmar", "Observações"]];
+        const rows = [["Nome", "Equipe", "WhatsApp", "Status", "Presenças", "1ª presença", "Última presença", "Como conheceu", "Quem convidou", "Nascimento", "Autorizou WhatsApp", "Dados a confirmar", "Observações"]];
         for (const p of S.people) {
           const st = derived.stats.get(p.id);
-          rows.push([p.full_name, p.phone ? maskPhone(p.phone) : "", st.status, st.total, fmtDate(st.first), fmtDate(st.last), p.how_found, p.invited_by, p.birth_date ? fmtDate(p.birth_date) : "", p.whatsapp_consent ? "sim" : "não", p.needs_review ? "sim" : "", p.notes]);
+          rows.push([p.full_name, p.team || "", p.phone ? maskPhone(p.phone) : "", st.status, st.total, fmtDate(st.first), fmtDate(st.last), p.how_found, p.invited_by, p.birth_date ? fmtDate(p.birth_date) : "", p.whatsapp_consent ? "sim" : "não", p.needs_review ? "sim" : "", p.notes]);
         }
         download(`pessoas-${todayISO()}.csv`, toCSV(rows)); return;
       }
@@ -791,7 +796,7 @@ async function submit(form) {
       const name = v("#p-name"), phone = onlyDigits(v("#p-phone"));
       if (!name) return toast("Coloque o nome.");
       if (phone && !isValidPhone(phone)) return toast("Telefone precisa ter DDD + número.");
-      const row = { full_name: name, phone: phone || null, birth_date: v("#p-birth") || null, how_found: v("#p-how") || null, invited_by: v("#p-inv") || null, notes: v("#p-notes") || null, needs_review: $root.querySelector("#p-review").checked };
+      const row = { full_name: name, phone: phone || null, birth_date: v("#p-birth") || null, how_found: v("#p-how") || null, invited_by: v("#p-inv") || null, notes: v("#p-notes") || null, team: v("#p-team") || null, needs_review: $root.querySelector("#p-review").checked };
       const q = S.sheet.id ? sb.from("people").update(row).eq("id", S.sheet.id).select().single() : sb.from("people").insert(row).select().single();
       const { data, error } = await q;
       if (error) throw (/duplicate|unique/i.test(error.message) ? new Error("já existe outra pessoa com esse telefone. Use Mesclar.") : error);

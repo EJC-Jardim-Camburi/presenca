@@ -1,11 +1,11 @@
 // Área da coordenação: login, painel, encontros (com QR ao vivo), pessoas e ajustes.
 // Todo acesso a dados passa pelas regras do banco: só quem está na tabela coordinators lê/escreve.
-import { sb } from "./config.js?v=20261023d";
+import { sb } from "./config.js?v=20261024a";
 import {
   esc, fmtDate, fmtShort, fmtPhone, maskPhone, onlyDigits, isValidPhone, waLink, firstName,
   todayISO, randomCode, getPosition, computeStats, firstTimeChecker, toCSV, download,
   MEETING_TYPES, HOW_FOUND, GROUP_TYPE,
-} from "./lib.js?v=20261023d";
+} from "./lib.js?v=20261024a";
 
 const $root = document.getElementById("root");
 const S = {
@@ -63,7 +63,10 @@ function scheduleReload() {
   }, 400);
 }
 
+let liveOn = false;
 function subscribeRealtime() {
+  if (liveOn) return;
+  liveOn = true;
   sb.channel("coord-live")
     .on("postgres_changes", { event: "*", schema: "public", table: "attendances" }, scheduleReload)
     .on("postgres_changes", { event: "*", schema: "public", table: "meetings" }, scheduleReload)
@@ -199,13 +202,25 @@ function traduz(m = "") {
   return m;
 }
 
+function renderAccessError() {
+  $root.innerHTML = `
+    <header class="hero"><p class="eyebrow">EJC Jardim Camburi</p><h1>Não consegui conferir seu acesso</h1></header>
+    <main class="wrap"><div class="card stack center">
+      <p>A conexão com o banco falhou agora há pouco. Isso costuma ser passageiro.</p>
+      <p class="tiny muted">Detalhe: ${esc(S.accessError)}</p>
+      <button class="btn primary block" data-act="retry-access">Tentar de novo</button>
+      <button class="btn block" data-act="logout">Sair e entrar de novo</button>
+    </div></main>`;
+}
+
 function renderNoAccess() {
   $root.innerHTML = `
     <header class="hero"><p class="eyebrow">EJC Jardim Camburi</p><h1>Sem acesso</h1></header>
     <main class="wrap"><div class="card stack center">
       <p>Você entrou como <b>${esc(S.session.user.email)}</b>, mas esse e-mail ainda não faz parte da coordenação.</p>
       <p class="muted">Peça para a coordenação cadastrar seu e-mail em Ajustes → Equipe e depois entre de novo.</p>
-      <button class="btn primary block" data-act="logout">Sair</button>
+      <button class="btn primary block" data-act="retry-access">Tentar de novo</button>
+      <button class="btn block" data-act="logout">Sair</button>
     </div></main>`;
 }
 
@@ -665,6 +680,7 @@ async function act(name, id, el) {
   try {
     switch (name) {
       case "logout": await sb.auth.signOut(); break;
+      case "retry-access": $root.innerHTML = '<div class="spinner" role="status"></div>'; return onSession(S.session);
       case "new-meeting": S.sheet = { kind: "meetingForm" }; break;
       case "edit-meeting": S.sheet = { kind: "meetingForm", id }; break;
       case "ask-del-meeting": S.sheet.confirmDel = true; break;
@@ -853,7 +869,16 @@ async function onSession(session) {
   S.session = session;
   S.me = null;
   if (!session) return render();
-  const { data } = await sb.from("coordinators").select("*").eq("user_id", session.user.id).maybeSingle();
+  // Confere se é coordenador. Erro passageiro (token renovando, rede) não pode virar "Sem acesso".
+  const lookup = () => sb.from("coordinators").select("*").eq("user_id", session.user.id).maybeSingle();
+  let { data, error } = await lookup();
+  if (error || !data) {
+    await sb.auth.refreshSession().catch(() => {});
+    await new Promise((r) => setTimeout(r, 600));
+    ({ data, error } = await lookup());
+  }
+  if (error) { S.accessError = error.message || String(error); return renderAccessError(); }
+  S.accessError = null;
   S.me = data;
   if (!S.me) return render();
   try { await loadAll(); } catch (e) { fail(e); }
